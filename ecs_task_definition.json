@@ -1,0 +1,18 @@
+{
+    "family": "my-ocr-app",
+    "containerDefinitions": [
+      {
+        "name": "my-ocr-app",
+        "image": "<ECR_URL>/my-ocr-app:latest",
+        "memory": 512,
+        "cpu": 256,
+        "portMappings": [
+          {
+            "containerPort": 8000,
+            "hostPort": 8000
+          }
+        ]
+      }
+    ]
+  }
+  

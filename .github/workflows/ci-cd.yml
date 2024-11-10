@@ -1,0 +1,41 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Run tests
+        run: |
+          python manage.py test
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - name: Build and push Docker image
+        run: |
+          docker build -t my-ocr-app .
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin <ECR_URL>
+          docker tag my-ocr-app:latest <ECR_URL>/my-ocr-app:latest
+          docker push <ECR_URL>/my-ocr-app:latest
+      - name: Deploy to ECS
+        run: aws ecs update-service --cluster my-ocr-cluster --service my-ocr-service --force-new-deployment

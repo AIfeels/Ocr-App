@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Translation App</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #translations { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Welcome to the OCR Translation App</h1>
+    
+    <form id="uploadForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" id="fileInput" name="file" required />
+        <button type="button" onclick="uploadAndTranslate()">Extract and Translate</button>
+    </form>
+    
+    <div id="result">
+        <h2>Extracted Text</h2>
+        <p id="extractedText"></p>
+        
+        <h2>Translations</h2>
+        <div id="translations"></div>
+    </div>
+
+    <script>
+        // Helper function to get the CSRF token from cookies
+        function getCSRFToken() {
+            const name = 'csrftoken=';
+            const decodedCookie = decodeURIComponent(document.cookie);
+            const cookies = decodedCookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.startsWith(name)) {
+                    return cookie.substring(name.length);
+                }
+            }
+            return '';
+        }
+
+        async function uploadAndTranslate() {
+            const fileInput = document.getElementById("fileInput").files[0];
+            if (!fileInput) {
+                alert("Please upload an image first.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", fileInput);
+
+            try {
+                const response = await fetch("/extract_and_translate/", {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()  // Include the CSRF token in the headers
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById("extractedText").innerText = data.text;
+
+                    const translationsDiv = document.getElementById("translations");
+                    translationsDiv.innerHTML = "";
+                    for (const [lang, translation] of Object.entries(data.translations)) {
+                        const langDiv = document.createElement("div");
+                        langDiv.innerHTML = `<strong>${lang}:</strong> ${translation}`;
+                        translationsDiv.appendChild(langDiv);
+                    }
+                } else {
+                    console.error("Failed to extract and translate text");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+    </script>
+</body>
+</html>
